@@ -44,8 +44,24 @@ services:
       KAFKA_JMX_HOSTNAME: "localhost"
       KAFKA_JMX_PORT: 31001
 
+  schema-registry:
+    image: confluentinc/cp-schema-registry:5.3.2
+    depends_on:
+      - zookeeper
+      - kafka
+    networks: 
+      - kafka-connect-network
+    ports:
+      - '8081:8081'
+      - '31002:31002'
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL: zookeeper:2181
+      SCHEMA_REGISTRY_JMX_HOSTNAME: "localhost"
+      SCHEMA_REGISTRY_JMX_PORT: 31002
+
   rabbitmq:
-    image: rabbitmq-connector
+    image: rabbitmq
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -57,7 +73,7 @@ services:
       - '5672:5672'
 
   kafka-connect:
-    image: rabbitmq-connector
+    image: rabbit-connector
     networks: 
       - kafka-connect-network
     ports:
@@ -70,6 +86,11 @@ services:
       CONNECT_CONFIG_STORAGE_TOPIC: docker-connect-configs
       CONNECT_OFFSET_STORAGE_TOPIC: docker-connect-offsets
       CONNECT_STATUS_STORAGE_TOPIC: docker-connect-status
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
+      CONNECT_INTERNAL_KEY_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
+      CONNECT_INTERNAL_VALUE_CONVERTER: "org.apache.kafka.connect.json.JsonConverter"
       CONNECT_REST_ADVERTISED_HOST_NAME: "kafka-connect"
       CONNECT_LOG4J_ROOT_LOGLEVEL: "ERROR"
       CONNECT_LOG4J_LOGGERS: "org.apache.kafka.connect.runtime.rest=WARN,org.reflections=ERROR"
@@ -82,6 +103,7 @@ services:
     depends_on:
       - zookeeper
       - kafka
+      - schema-registry
       - rabbitmq
 
   rest-proxy:
@@ -89,6 +111,7 @@ services:
     depends_on:
       - zookeeper
       - kafka
+      - schema-registry
     networks: 
       - kafka-connect-network
     ports:
@@ -98,5 +121,6 @@ services:
       KAFKA_REST_HOST_NAME: rest-proxy
       KAFKA_REST_BOOTSTRAP_SERVERS: 'kafka:29092'
       KAFKA_REST_LISTENERS: "http://0.0.0.0:8082"
+      KAFKA_REST_SCHEMA_REGISTRY_URL: 'http://schema-registry:8081'
       KAFKAREST_JMX_HOSTNAME: "localhost"
       KAFKAREST_JMX_PORT: 31005

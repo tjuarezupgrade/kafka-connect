@@ -11,7 +11,6 @@ docker build -t . rabbitmq-connector
 docker compose up
 ```
 
-
 # Useful commands
 
 ## Register a connector
